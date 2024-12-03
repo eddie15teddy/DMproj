@@ -1,0 +1,4 @@
+*.png
+Existing methods/*
+Runs/*
+__pycache__/*
