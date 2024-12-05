@@ -13,13 +13,17 @@ DEF_CENTROID_SIZE = 20;
 X = 0
 Y = 1
 
+# CENTROIDS = [(1, 1), (35, 1), (55, 1), ]
 CENTROIDS = [(1, 1), (20, 1), (40, 1), (60, 1)]
 # CENTROIDS = [(70, 100), (71, 101), (72, 102), (73, 103)]
+
 COLOURS = ['red', 'green', 'blue', 'orange']
+# COLOURS = ['red', 'green', 'blue']
+
 LT_CENTROID_COLOUR = 'grey'
 DK_CENTROID_COLOUR = 'black'
 
-NEW_POINTS = 100
+NEW_POINTS = 50
 MIN_AGE = 45
 MAX_AGE = 70
 MIN_SCORE = 80

@@ -1,6 +1,7 @@
 import copy
 from constants import *
 from typing import Union
+import math
 
 class Points:
     def __init__(self, points: list[(float, float)] = [], 
@@ -89,5 +90,27 @@ class Points:
         points = Points(centroids, groups=[DK_CENTROID_COLOUR] * cent_len, sizes = [DEF_CENTROID_SIZE] * cent_len)
         return points
 
-# Another test metric: number of points in wrong cluster
-# Run test where we start with half the points, and the other half get added one by one
+    def get_cluster_spread(self, groups: list[str]):
+        # calculate spread in added
+        group_spread = {colour: 0 for colour in groups}
+        group_count = {colour: 0 for colour in groups}
+        total_distance = 0
+
+        for i, colour in enumerate(groups):
+            cur_group = self.get_group_points(colour)
+            group_distance = sum(Points._calculate_distance(cur_point, self.centroids.points[i]) for cur_point in cur_group )
+            group_spread[colour] = group_distance / len(cur_group)
+            group_count[colour] = len(cur_group)
+        
+            total_distance += group_distance
+        
+        total_spread = total_distance / self.count
+
+        group_spread['total'] = total_spread
+        group_count['total'] = self.count
+
+        return (group_spread, group_count)
+
+    def _calculate_distance(point: tuple[float, float], centroid: tuple[float, float]) -> float:
+        distance = math.sqrt((centroid[X] - point[X]) ** 2 + (centroid[Y] - point[Y]) ** 2)
+        return distance
