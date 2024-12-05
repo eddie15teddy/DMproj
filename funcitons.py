@@ -65,22 +65,6 @@ def get_cluster_means(points: list[(float, float)], point_groups: list[str], clu
         j = j +1
     return means
 
-def assign_points_to_cluster(points: list[(float, float)], centroids: list[(float, float)], given_groups: list[str]) -> tuple[list[str], list[float]]:
-    groups = []
-    distances = []
-
-    for point in points:
-        closest_centroid_index = min(
-            enumerate(centroids),
-            key = lambda x: calculate_distance(point, x[1])
-        )[0]
-
-        groups.append(given_groups[closest_centroid_index])
-        distances.append(calculate_distance(point, centroids[closest_centroid_index]))
-
-    
-    return groups, distances
-
 def run_clustering_from_file(plot_name: str, starting_centroids: list[float, float], colours_groups: list[str], 
                              show: bool = False, save: bool = False) -> Points:
     points = Points(get_points_from_file(), centroids=starting_centroids)
@@ -93,9 +77,7 @@ def run_clustering_from_points(plot_name: str, colours_groups: list[str], points
     means = copy.deepcopy(points.centroids.points)
     points_clustered = copy.deepcopy(points)
 
-    point_colours, point_distances = assign_points_to_cluster(points_clustered.points, means, colours_groups)
-    points_clustered.groups = point_colours
-    points_clustered.distances = point_distances
+    points_clustered.assign_points_to_cluster()
 
     if show:
         show_scatter_plot(points_clustered, f"{plot_name}-0", False)
@@ -108,11 +90,9 @@ def run_clustering_from_points(plot_name: str, colours_groups: list[str], points
 
         old_means = means
 
-        point_colours, point_distances = assign_points_to_cluster(points_clustered.points, means, colours_groups)
-        points_clustered.groups = point_colours
-        points_clustered.distances = point_distances
-        
-        means = list(get_cluster_means(points_clustered.points, point_colours, colours_groups, means).values())
+        points_clustered.assign_points_to_cluster()
+
+        means = list(get_cluster_means(points_clustered.points, points_clustered.groups, colours_groups, means).values())
         points_clustered.centroids = Points.create_centroids(means)
 
 
@@ -121,9 +101,6 @@ def run_clustering_from_points(plot_name: str, colours_groups: list[str], points
         if save:
             save_scatter_plot(points_clustered, f"{plot_name}-{i}")
 
-    if show:
-        show_scatter_plot(points_clustered, f'{plot_name}-{i}')
-
     return points_clustered
 
 # Adds number_of_points to points. passed object is modified
@@ -131,6 +108,7 @@ def add_random_points(number_of_points: int, points: Points,
                       save: bool = False, show: bool = False, plot_name: str = 'plot', reclustering: bool = True):
 
     for i in range(number_of_points):
+        cur_plot_name = f'{plot_name}-{i}'
         # generate new point
         if show:
             print(f"Generating point {i}")
@@ -141,20 +119,27 @@ def add_random_points(number_of_points: int, points: Points,
             points.append(new_point, group='yellow', size=1000, alpha=.5)
             points.append(new_point, group='black')
             if show:
-                show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
+                show_scatter_plot(points, block=False, plot_name=cur_plot_name)
             if save:
-                save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
+                save_scatter_plot(points, plot_name=cur_plot_name)
 
             points.remove_last()
             points.remove_last()
 
         # assign point to a new cluster
-        new_point_cluster = assign_points_to_cluster([new_point], points.centroids.points, COLOURS)[0][0]
+        closest_centroid_index = min(
+                enumerate(points.centroids.points),
+                key = lambda x: calculate_distance(new_point, x[1])
+            )[0]
+
+        new_point_cluster = COLOURS[closest_centroid_index]
+        
         points.append(new_point, new_point_cluster)
         if show:
-            show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
+            show_scatter_plot(points, block=False, plot_name=cur_plot_name)
         if save:
-            save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
+            save_scatter_plot(points, plot_name=cur_plot_name)
+
             
         # move centroid
         cluster_size = points.get_group_size(new_point_cluster)
@@ -164,8 +149,28 @@ def add_random_points(number_of_points: int, points: Points,
         points.centroids.points[centroid_index] = (new_centroid_x, new_centroid_y)
 
         if show:
-            show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
+            show_scatter_plot(points, block=False, plot_name=cur_plot_name)
         if save:
-            save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
+            points.append(new_point, group='yellow', size=1000, alpha=.5)
+            save_scatter_plot(points, plot_name=cur_plot_name)
+            points.remove_last()
 
-        # if reclustering:
+        if reclustering:
+            group_spread = points.original_cluster_spread
+            total_move_ratio = 0
+            for j, colour in enumerate(COLOURS):
+                cur_cent = points.centroids.points[j]
+                cur_cent_og = points.original_centroids.points[j]
+
+                dist_cur_cent_moved = calculate_distance(cur_cent, cur_cent_og)
+                total_move_ratio += dist_cur_cent_moved / group_spread[colour]
+            
+            print(f"Total move ratio: {total_move_ratio}")
+            if total_move_ratio >= RECLUSTERING_THRESHOLD:
+                print("Time to recluster")
+                points.centroids = Points.create_centroids(CENTROIDS)
+                points = run_clustering_from_points(f"{cur_plot_name} - R", COLOURS, points, show=show, save=save)
+                points.update_original_cluster_spread()
+                points.update_original_centroids()
+    
+    return points

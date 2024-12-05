@@ -24,15 +24,20 @@ class Points:
         else:
             self.centroids = copy.deepcopy(centroids)
         self.other_points = copy.deepcopy(other_points)
-
-        # orginal_centroids are stored seperately to calculate how much the centroid has moved
-        if self.centroids is not None:
-            self.update_original_centroids()
-
+ 
         self.alpha = ([1] * self.count if alpha is None else alpha)
-        self.groups = ([DK_CENTROID_COLOUR] * self.count if groups is None else groups)
         self.sizes = ([DEF_POINT_SIZE] * self.count if sizes is None else sizes)
-        self.distances = ([0] * self.count if distances is None else distances)
+
+        if self.centroids is not None:
+            # Sets original_centroids (stored seperately to calculate how much the centroid has moved)
+            self.update_original_centroids()
+            # Sets distances and groups
+            self.assign_points_to_cluster()
+            # Sets original cluster spread
+            self.update_original_cluster_spread()
+        else:
+            self.distances = ([0] * self.count if distances is None else distances)
+            self.groups = ([DK_CENTROID_COLOUR] * self.count if groups is None else groups)        
 
     def append(self, point: tuple[float, float], group: str, size: float = DEF_POINT_SIZE, distance: float = None, alpha: float = 1):
         # add point
@@ -113,7 +118,7 @@ class Points:
         points = Points(centroids, groups=[DK_CENTROID_COLOUR] * cent_len, sizes = [DEF_CENTROID_SIZE] * cent_len)
         return points
 
-    def get_cluster_spread(self, groups: list[str]):
+    def get_cluster_spread(self, groups: list[str]) -> tuple[dict[str, int], dict[str, int]]:
         # calculate spread in added
         group_spread = {colour: 0 for colour in groups}
         group_count = {colour: 0 for colour in groups}
@@ -121,9 +126,11 @@ class Points:
 
         for i, colour in enumerate(groups):
             cur_group = self.get_group_points(colour)
-            group_distance = sum(Points._calculate_distance(cur_point, self.centroids.points[i]) for cur_point in cur_group )
-            group_spread[colour] = group_distance / len(cur_group)
-            group_count[colour] = len(cur_group)
+            group_distance = 0
+            if len(cur_group) != 0:
+                group_distance = sum(Points._calculate_distance(cur_point, self.centroids.points[i]) for cur_point in cur_group )
+                group_spread[colour] = group_distance / len(cur_group)
+                group_count[colour] = len(cur_group)
         
             total_distance += group_distance
         
@@ -143,6 +150,27 @@ class Points:
         self.original_centroids.groups = [LT_CENTROID_COLOUR] * centroids.count
         self.original_centroids.alpha = [0.5] * centroids.count
     
+    def update_original_cluster_spread(self):
+        self.original_cluster_spread = self.get_cluster_spread(COLOURS)[0]
+
+    # Assigns its all its points to the nearest cluster. Sets distance and groups
+    def assign_points_to_cluster(self) -> tuple[list[str], list[float]]:
+        groups = []
+        distances = []
+
+        for point in self.points:
+            closest_centroid_index = min(
+                enumerate(self.centroids.points),
+                key = lambda x: Points._calculate_distance(point, x[1])
+            )[0]
+
+            groups.append(COLOURS[closest_centroid_index])
+            distances.append(Points._calculate_distance(point, self.centroids.points[closest_centroid_index]))
+
+        self.groups = groups
+        self.distances = distances
+
     def _calculate_distance(point: tuple[float, float], centroid: tuple[float, float]) -> float:
         distance = math.sqrt((centroid[X] - point[X]) ** 2 + (centroid[Y] - point[Y]) ** 2)
         return distance
+ 
