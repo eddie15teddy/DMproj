@@ -126,10 +126,9 @@ def run_clustering_from_points(plot_name: str, colours_groups: list[str], points
 
     return points_clustered
 
+# Adds number_of_points to points. passed object is modified
 def add_random_points(number_of_points: int, points: Points,
-                      save: bool = False, show: bool = False, plot_name: str = 'plot') -> Points:
-    
-    points_copy = copy.deepcopy(points)
+                      save: bool = False, show: bool = False, plot_name: str = 'plot', reclustering: bool = True):
 
     for i in range(number_of_points):
         # generate new point
@@ -139,34 +138,34 @@ def add_random_points(number_of_points: int, points: Points,
 
         # add new point to graph
         if show or save:
-            points_copy.append(new_point, group='yellow', size=1000, alpha=.5)
-            points_copy.append(new_point, group='black')
+            points.append(new_point, group='yellow', size=1000, alpha=.5)
+            points.append(new_point, group='black')
             if show:
-                show_scatter_plot(points_copy, block=False, plot_name=f'{plot_name}-{i}')
+                show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
             if save:
-                save_scatter_plot(points_copy, plot_name=f'{plot_name}-{i}')
+                save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
 
-            points_copy.remove_last()
-            points_copy.remove_last()
+            points.remove_last()
+            points.remove_last()
 
         # assign point to a new cluster
-        new_point_cluster = assign_points_to_cluster([new_point], points_copy.centroids.points, COLOURS)[0][0]
-        points_copy.append(new_point, new_point_cluster)
+        new_point_cluster = assign_points_to_cluster([new_point], points.centroids.points, COLOURS)[0][0]
+        points.append(new_point, new_point_cluster)
         if show:
-            show_scatter_plot(points_copy, block=False, plot_name=f'{plot_name}-{i}')
+            show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
         if save:
-            save_scatter_plot(points_copy, plot_name=f'{plot_name}-{i}')
+            save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
             
         # move centroid
-        cluster_size = points_copy.get_group_size(new_point_cluster)
+        cluster_size = points.get_group_size(new_point_cluster)
         centroid_index = COLOURS.index(new_point_cluster)
-        new_centroid_x = (cluster_size * points_copy.centroids.points[centroid_index][X] + new_point[X]) / (cluster_size + 1)
-        new_centroid_y = (cluster_size * points_copy.centroids.points[centroid_index][Y] + new_point[Y]) / (cluster_size + 1)
-        points_copy.centroids.points[centroid_index] = (new_centroid_x, new_centroid_y)
+        new_centroid_x = (cluster_size * points.centroids.points[centroid_index][X] + new_point[X]) / (cluster_size + 1)
+        new_centroid_y = (cluster_size * points.centroids.points[centroid_index][Y] + new_point[Y]) / (cluster_size + 1)
+        points.centroids.points[centroid_index] = (new_centroid_x, new_centroid_y)
 
         if show:
-            show_scatter_plot(points_copy, block=False, plot_name=f'{plot_name}-{i}')
+            show_scatter_plot(points, block=False, plot_name=f'{plot_name}-{i}')
         if save:
-            save_scatter_plot(points_copy, plot_name=f'{plot_name}-{i}')
+            save_scatter_plot(points, plot_name=f'{plot_name}-{i}')
 
-    return points_copy
+        # if reclustering:

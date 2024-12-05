@@ -18,11 +18,16 @@ class Points:
 
         self.count = len(points)
 
+        # centroids, original_centroids and other_points are drawn, but removed from the calculations
         if type(centroids) == list: 
             self.centroids = Points.create_centroids(centroids)
         else:
             self.centroids = copy.deepcopy(centroids)
         self.other_points = copy.deepcopy(other_points)
+
+        # orginal_centroids are stored seperately to calculate how much the centroid has moved
+        if self.centroids is not None:
+            self.update_original_centroids()
 
         self.alpha = ([1] * self.count if alpha is None else alpha)
         self.groups = ([DK_CENTROID_COLOUR] * self.count if groups is None else groups)
@@ -76,10 +81,28 @@ class Points:
         return group
     
     def get_all_points(self):
-        new_points_list = self.points + (self.other_points.points if self.other_points is not None else []) + self.centroids.points
-        new_alpha = self.alpha + (self.other_points.alpha if self.other_points is not None else []) + self.centroids.alpha 
-        new_groups = self.groups + (self.other_points.groups if self.other_points is not None else []) + self.centroids.groups 
-        new_sizes = self.sizes + (self.other_points.sizes if self.other_points is not None else []) + self.centroids.sizes 
+        # Add points + other_points + original_centroids + centroids
+
+        new_points_list = copy.deepcopy(self.points)                                                        # points
+        new_points_list += (self.other_points.points if self.other_points is not None else [])              # other_points
+        new_points_list += (self.original_centroids.points if self.original_centroids is not None else [])  # original_centroids
+        new_points_list += (self.centroids.points if self.centroids is not None else [])                    # centroids
+
+        new_alpha = copy.deepcopy(self.alpha)                                                               # points
+        new_alpha += (self.other_points.alpha if self.other_points is not None else [])                     # other_points
+        new_alpha += (self.original_centroids.alpha if self.original_centroids is not None else [])         # original_centroids
+        new_alpha += (self.centroids.alpha if self.centroids is not None else [])                           # centroids
+        
+        new_groups = copy.deepcopy(self.groups)                                                             # points
+        new_groups += (self.other_points.groups if self.other_points is not None else [])                   # other_points 
+        new_groups += (self.original_centroids.groups if self.original_centroids is not None else [])       # original_centroids
+        new_groups += (self.centroids.groups if self.centroids is not None else [])                         # centroids
+
+
+        new_sizes = copy.deepcopy(self.sizes)                                                               # points
+        new_sizes += (self.other_points.sizes if self.other_points is not None else [])                     # other_points
+        new_sizes += (self.original_centroids.sizes if self.original_centroids is not None else [])         # original_centroids
+        new_sizes += (self.centroids.sizes if self.centroids is not None else [])                           # centroids
 
         new_points = Points(new_points_list, new_groups, alpha=new_alpha, sizes=new_sizes)
 
@@ -111,6 +134,15 @@ class Points:
 
         return (group_spread, group_count)
 
+    # If centroids is passed, set original_centroids to that. Otherwise set then to current centroids
+    def update_original_centroids(self, centroids: 'Points' = None):
+        if centroids is None:
+            centroids = self.centroids
+
+        self.original_centroids = copy.deepcopy(centroids)
+        self.original_centroids.groups = [LT_CENTROID_COLOUR] * centroids.count
+        self.original_centroids.alpha = [0.5] * centroids.count
+    
     def _calculate_distance(point: tuple[float, float], centroid: tuple[float, float]) -> float:
         distance = math.sqrt((centroid[X] - point[X]) ** 2 + (centroid[Y] - point[Y]) ** 2)
         return distance

@@ -9,20 +9,16 @@ time.sleep(5)
 # cluster from file
 points = run_clustering_from_file(PLOT_NAME, CENTROIDS, COLOURS)
 
-# add original centroids and 100 random points
-other_points = Points()
-for centroid in points.centroids.points:
-    other_points.append(centroid, LT_CENTROID_COLOUR, DEF_CENTROID_SIZE, alpha=0.5)
-points.other_points = other_points
-points_add = add_random_points(NEW_POINTS, points, False, show = False)
+points_add = copy.deepcopy(points)
+points_add.update_original_centroids() 
+add_random_points(NEW_POINTS, points_add, False, show = False)
 
 save_scatter_plot(points_add, plot_name='dynamic')
 
 # recluster the new points
-points_add_copy = copy.deepcopy(points_add)
-points_add_copy.centroids = Points(CENTROIDS)
-points_add_copy.other_points = None
-points_rerun = run_clustering_from_points('regular', COLOURS, points_add_copy, show=False)
+points_rerun = copy.deepcopy(points_add)
+points_rerun.update_original_centroids()
+points_rerun = run_clustering_from_points('regular', COLOURS, points_rerun, show=True)
 
 save_scatter_plot(points_rerun, plot_name='regular')
 
